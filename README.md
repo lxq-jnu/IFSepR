@@ -5,7 +5,7 @@ Project page of  "[IFSepR: A general framework for image fusion based on separat
 
 ### Usage
 ```bash
-# Replicate our method on fusing images
+# Use the following command to test our method. The fused results will be saved in ./result/
 python main.py
 ```
 
