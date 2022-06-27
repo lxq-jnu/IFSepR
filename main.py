@@ -41,7 +41,7 @@ from tensorflow.python.framework import dtypes
 from tensorflow.python.keras import backend as K
 
 # WEIGHTS_PATH = ''
-# WEIGHTS_PATH_NO_TOP = h5py.File('/root/workspace/xmy/VGG19test/vgg19_weights_tf_dim_ordering_tf_kernels_notop.h5','r')
+# WEIGHTS_PATH_NO_TOP = h5py.File('vgg19.h5','r')
 # myself define layer
 
 # myself-define choose-max layer
