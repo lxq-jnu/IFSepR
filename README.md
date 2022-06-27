@@ -15,7 +15,7 @@ python main.py
 If you find this code is useful for your research, please consider to cite our paper. 
 
 ```
-@ARTICLE{9622164,
+@ARTICLE{LuoTMM2021,
   author={Luo, Xiaoqing and Gao, Yuanhao and Wang, Anqi and Zhang, Zhancheng and Wu, Xiao-Jun},
   journal={IEEE Transactions on Multimedia}, 
   title={IFSepR: A general framework for image fusion based on separate representation learning}, 
