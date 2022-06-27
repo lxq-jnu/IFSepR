@@ -30,7 +30,7 @@ from tensorflow.python.keras.preprocessing import image
 # from pylab import *
 # import matplotlib.pyplot as plt
 # from tensorflow.python.keras.utils.vis_utils import plot_model
-from myutils_old import *
+from utils import *
 import scipy.io as sio
 from tensorflow.python.keras.layers import TimeDistributed
 from tensorflow.python.keras.layers import Input, Dense, concatenate, Add
