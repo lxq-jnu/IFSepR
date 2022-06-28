@@ -597,7 +597,7 @@ if __name__ == '__main__':
     file_path1 = 'IR/'
     file_path2 = 'VI/'
 
-    save_path = '/root/raid1/gyh/123/'
+
     for ind in range(1,49):
         filename = '{:0}'.format(ind)
         img_1 = os.path.join(file_path1 + '{0}.bmp'.format(filename))
