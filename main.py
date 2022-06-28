@@ -482,7 +482,6 @@ def gyh_method(img1, img2, save_path, ind):
     # output_hinden_pri=Lambda(layer_cal_xmy, output_shape=compare_output_shape)([x1_e,x4_e])
 
 
-    ###test_gyh是基于l1的融合方法函数
     output_hinden_pri = Lambda(test_gyh, output_shape=compare_output_shape)([x1_e, x4_e])  ######            pri
 
 
