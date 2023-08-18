@@ -1,0 +1,145 @@
+import tensorflow as tf
+import h5py
+from utils import *
+from tensorflow.python.keras import backend as K
+
+
+def strategy1(x):
+    # x0shape = x[0].shape
+    # print(x0shape)
+    # [channel,chang,width,height] = x[0].shape
+    sz = x[0].shape
+    # channel = int(sz[0])
+    chang = int(sz[1])
+    width = int(sz[2])
+    height = int(sz[3])
+
+    dimension = x[0].shape
+
+    print(x[0].shape, 'x[0].shape')
+    input_1 = x[0]
+    print(input_1.shape, 'input_1.shape')
+    input_2 = x[1]
+    print(input_2.shape, 'input_2.shape')
+    results = []
+    # caculate L1-norm
+    temp_abs_a = tf.abs(input_1)
+    temp_abs_b = tf.abs(input_2)
+    _l1_a = tf.reduce_sum(temp_abs_a, 3)
+    _l1_b = tf.reduce_sum(temp_abs_b, 3)
+    l1_a = _l1_a
+    l1_b = _l1_b
+
+    # caculate the map for source images
+    mask_value = l1_a + l1_b
+
+    mask_sign_a = l1_a / mask_value
+    mask_sign_b = l1_b / mask_value
+
+    array_MASK_a = mask_sign_a
+    array_MASK_b = mask_sign_b
+    ggyh = 0
+    for i in range(0, height):
+        # N=(chang*width)*(3/5)
+        N = np.int64((chang * width))
+        # ggyh = tf.reduce_mean(input_2[:,:,:,i])+tf.reduce_mean(input_1[:,:,:,i])
+        # N=np.int64(N/5)
+        # results.append(tf.cond(tf.count_nonzero(input_2[:,:,:,i])<N, lambda: K.maximum(input_1[:,:,:,i], input_2[:,:,:,i]), lambda: array_MASK_a*input_1[:,:,:,i] + array_MASK_b*input_2[:,:,:,i]))
+        results.append(tf.cond((tf.reduce_mean(input_2[:, :, :, i]) + tf.reduce_mean(input_1[:, :, :, i])) < 3,
+                               lambda: K.maximum(input_1[:, :, :, i], input_2[:, :, :, i]),
+                               lambda: array_MASK_a * input_1[:, :, :, i] + array_MASK_b * input_2[:, :, :, i]))
+        # with tf.Session() as sess:
+        # m_a= sess.run([ggyh])
+        # print(m_a)
+    res = tf.stack(results, axis=-1)  # = K.concatenate(results,axis=3)
+    # res=tf.zeros_like(res1)
+    return res
+
+
+def strategy2(x):
+    # x0shape = x[0].shape
+    # print(x0shape)
+    # [channel,chang,width,height] = x[0].shape
+    sz = x[0].shape
+    # channel = int(sz[0])
+    chang = int(sz[1])
+    width = int(sz[2])
+    height = int(sz[3])
+
+    dimension = x[0].shape
+
+    # print(x[0].shape,'x[0].shape')
+    input_1 = x[0]
+    # print(input_1.shape,'input_1.shape')
+    input_2 = x[1]
+    # print(input_2.shape,'input_2.shape')
+    results = []
+    # caculate L1-norm
+    temp_abs_a = tf.abs(input_1)
+    temp_abs_b = tf.abs(input_2)
+    _l1_a = tf.reduce_sum(temp_abs_a, 3)
+    _l1_b = tf.reduce_sum(temp_abs_b, 3)
+    l1_a = _l1_a
+    l1_b = _l1_b
+
+    # caculate the map for source images
+    mask_value = l1_a + l1_b
+
+    mask_sign_a = l1_a / mask_value
+    mask_sign_b = l1_b / mask_value
+
+    array_MASK_a = mask_sign_a
+    array_MASK_b = mask_sign_b
+    ggyh = 0
+    for i in range(0, height):
+        # N=(chang*width)*(3/5)
+        N = np.int64((chang * width))
+        # ggyh = tf.reduce_mean(input_2[:,:,:,i])+tf.reduce_mean(input_1[:,:,:,i])
+        # N=np.int64(N/5)
+        # results.append(tf.cond(tf.count_nonzero(input_2[:,:,:,i])<N, lambda: K.maximum(input_1[:,:,:,i], input_2[:,:,:,i]), lambda: array_MASK_a*input_1[:,:,:,i] + array_MASK_b*input_2[:,:,:,i]))
+        # results.append(tf.cond(tf.reduce_mean(input_2[:,:,:,i])>tf.reduce_mean(input_1[:,:,:,i]), lambda: input_2[:,:,:,i], lambda: input_1[:,:,:,i]))
+        results.append(input_2[:, :, :, i] + input_1[:, :, :, i])
+        # with tf.Session() as sess:
+        # m_a= sess.run([ggyh])
+        # print(m_a)
+    res = tf.stack(results, axis=-1)  # = K.concatenate(results,axis=3)
+    # res=tf.zeros_like(res1)
+    return res
+
+def L1_norm(x):
+    result = []
+    narry_a = x[0]
+    narry_b = x[1]
+
+    dimension = x[0].shape
+    print(dimension, 'dimension___shape')
+    # caculate L1-norm
+    temp_abs_a = tf.abs(narry_a)
+    temp_abs_b = tf.abs(narry_b)
+    _l1_a = tf.reduce_sum(temp_abs_a, 3)
+    _l1_b = tf.reduce_sum(temp_abs_b, 3)
+
+    # _l1_a = tf.reduce_sum(_l1_a, 0)
+    # _l1_b = tf.reduce_sum(_l1_b, 0)
+    l1_a = _l1_a
+    l1_b = _l1_b
+
+    # caculate the map for source images
+    mask_value = l1_a + l1_b
+
+    mask_sign_a = l1_a / mask_value
+    mask_sign_b = l1_b / mask_value
+
+    array_MASK_a = mask_sign_a
+    array_MASK_b = mask_sign_b
+
+    for i in range(dimension[3]):
+        temp_matrix = array_MASK_a * narry_a[:, :, :, i] + array_MASK_b * narry_b[:, :, :, i]
+        # print(temp_matrix.shape,'temp_matrix')#(?,248,316)
+        result.append(temp_matrix)
+
+    result = tf.stack(result, axis=-1)
+
+    # resule_tf = np.reshape(result, (dimension[0], dimension[IR], dimension[VI], dimension[3]))
+
+    return result
