@@ -1,0 +1,213 @@
+from __future__ import print_function
+# from VGG19_trans import *
+# import pydot
+# import graphviz
+# import keras
+from tensorflow import keras
+from tensorflow.python.keras import backend as K
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+from scipy.misc import imread, imsave
+import warnings
+import h5py
+import os
+import time
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Flatten, Dense, Input
+from tensorflow.python.keras.layers import GlobalMaxPooling2D
+from tensorflow.python.keras.layers import GlobalAveragePooling2D
+from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
+from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras.preprocessing import image
+from utils import *
+import scipy.io as sio
+from tensorflow.python.keras.layers import TimeDistributed
+from tensorflow.python.keras.layers import Input, Dense, concatenate, Add
+from tensorflow.python.keras.optimizers import RMSprop, Adam
+from tensorflow.python.keras.layers import Lambda
+from tensorflow.python.keras.utils import plot_model
+from tensorflow.python.framework import dtypes
+from tensorflow.python.keras import backend as K
+from Loss import difference_loss, similarity_loss, lossg
+from strategy import strategy1, strategy2
+
+
+def compare_output_shape(input_shape):
+    return input_shape[0]
+
+
+def gyh_method(img1, img2, filename, ind):
+    ###########################################image process   lytro-09-A
+
+    img_1 = image.img_to_array(img1)
+    chang_1 = img_1.shape[0]
+    kuan_1 = img_1.shape[1]
+    print(img_1.shape, 'img_to_array')
+    img_1 = np.expand_dims(img_1, axis=0)
+    print(img_1.shape, 'expand_dims')
+    img_1 = preprocess_images(img_1, tmin=0, tmax=1)
+    print(img_1.shape, 'preprocess_images')
+    img2 = image.img_to_array(img2)
+    chang_2 = img2.shape[0]
+    kuan_2 = img2.shape[1]
+    print(img2.shape, 'img_to_array')
+    img_2 = np.expand_dims(img2, axis=0)
+    print(img_2.shape, 'expand_dims')
+    img_2 = preprocess_images(img_2, tmin=0, tmax=1)
+    print(img_2.shape, 'preprocess_images')
+
+    ###########################################network structure:
+    input0_1 = Input(shape=(chang_1, kuan_1, 1))
+    input0_2 = Input(shape=(chang_1, kuan_1, 1))
+    # input0_3 = Input(shape=(chang_1, kuan_1, IR))
+
+    input_1 = keras.layers.Concatenate()([input0_1, input0_1, input0_1])
+    input_2 = keras.layers.Concatenate()([input0_2, input0_2, input0_2])
+    # input_3 = keras.layers.Concatenate()([input0_1, input0_2, input0_3])
+    # input_1 = Input(shape=(chang_1, kuan_1,3))
+
+    # input_2 = Input(shape=(chang_2, kuan_2,3))
+    # input_1 = Input(shape=(496,632,3))
+
+    # input_2 = Input(shape=(496,632,3))
+    #############################share layer
+    sharelayer1 = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')
+    sharelayer2 = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv2')
+    # sharelayer3 = MaxPooling2D((VI, VI), strides=(VI, VI), name='block1_pool')
+    sharelayer4 = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')
+    sharelayer5 = Conv2D(64, (3, 3), activation='relu', padding='same', data_format='channels_last',
+                         name='xs_de2_conv1')
+    # sharelayer6 = UpSampling2D((VI, VI))
+    sharelayer7 = Conv2D(32, (3, 3), activation='relu', padding='same', data_format='channels_last',
+                         name='xs_de1_conv2')
+    sharelayer8 = Conv2D(32, (3, 3), activation='relu', padding='same', data_format='channels_last',
+                         name='xs_de1_conv1')
+    outshare9 = Conv2D(3, (3, 3), padding='same', name='xs_out')
+    # shareout=Conv2D(IR, (3, 3),activation='tanh',padding='same',name='share_out')
+    ##
+    x1 = Conv2D(64, (3, 3), activation='relu', padding='same', name='x1_block1_conv1')(input_1)
+    x1 = Conv2D(64, (3, 3), activation='relu', padding='same', name='x1_block1_conv2')(x1)
+    # x1 = MaxPooling2D((VI, VI), strides=(VI, VI), name='x1_block1_pool')(x1)
+    x1_e = Conv2D(128, (3, 3), activation='relu', padding='same', name='x1_block2_conv1')(x1)
+    # x1=Conv2D(3, (3, 3),activation='tanh',padding='same',name='x1_out')(out_x1)
+    ##
+
+    x2_1 = sharelayer1(input_1)
+    x2_2 = sharelayer1(input_2)
+
+    x2_1 = sharelayer2(x2_1)
+    x2_2 = sharelayer2(x2_2)
+
+    x2_c = keras.layers.Concatenate(axis=3)([x2_1, x2_2])
+    x2_e = sharelayer4(x2_c)
+
+    ##
+    x4 = Conv2D(64, (3, 3), activation='relu', padding='same', name='x4_block1_conv1')(input_2)
+    x4 = Conv2D(64, (3, 3), activation='relu', padding='same', name='x4_block1_conv2')(x4)
+    # x4 = MaxPooling2D((VI, VI), strides=(VI, VI), name='x4_block1_pool')(x4)
+    x4_e = Conv2D(128, (3, 3), activation='relu', padding='same', name='x4_block2_conv1')(x4)
+    # x4=Conv2D(3, (3, 3),activation='tanh',padding='same',name='x1_out')(out_x4)
+
+    losszj1 = Lambda(lambda x: difference_loss(*x), name='losszj1')([x1_e, x2_e])  # this
+
+    losszj2 = Lambda(lambda x: difference_loss(*x), name='losszj2')([x2_e, x4_e])
+
+    # losszj3 = Lambda(lambda x:similarity_loss(*x),name = 'losszj3')([x2_e,x3_e])
+
+    losszj = Lambda(lambda x: 0.6 * x[0] + 0.6 * x[1], name='losszj')([losszj1, losszj2])
+    # output_hinden_pri=Lambda(test_xmy, output_shape=compare_output_shape)([x1_e,x4_e])
+    # output_hinden_pri=keras.layers.Maximum()([x1_e,x4_e])                                            ########
+    # output_hinden_pri=Lambda(layer_cal_xmy, output_shape=compare_output_shape)([x1_e,x4_e])
+
+    output_hinden_pri = Lambda(strategy1, output_shape=compare_output_shape)([x1_e, x4_e])  ######            pri
+
+    # print(x1_e.shape,'x1_e.shape')
+    # output_hinden_pri=Lambda(compare, output_shape=compare_output_shape)([x1_e,x4_e])
+    print('output_hinden_pri_______:', output_hinden_pri.shape)
+    # output_hinden_com1=keras.layers.Maximum()([x2_e,x3_e])
+    # output_hinden_com2=keras.layers.Minimum()([x2_e,x3_e])
+    # output_hinden_com=keras.layers.Average()([output_hinden_com1,output_hinden_com2])
+    # output_hinden_com=Lambda(bianyuanqiangdu, output_shape=compare_output_shape)([x2_e,x3_e])
+    # test_xmy  layer_cal_xmy  test_xmy
+    # output_hinden_com=keras.layers.Maximum()([x2_e,x3_e])
+    output_hinden_com = x2_e  ######com
+    # output_hinden_com=Lambda(test_xmy, output_shape=compare_output_shape)([x2_e,x3_e])
+    print(output_hinden_com, 'output_hinden_com')
+    # output_hinden_com=Lambda(compare, output_shape=compare_output_shape)([output_hinden_com1,output_hinden_com2])
+    # output_hinden_com=Lambda(compare, output_shape=compare_output_shape)([x2_e,x3_e])
+    # output_hinden_priandcom = Lambda(test_gyh2,output_shape=compare_output_shape)([output_hinden_pri,output_hinden_com])          ##
+    # output_hinden_priandcom = keras.layers.Add()([output_hinden_pri, output_hinden_com])
+    # print('output_hinden_com_______:',output_hinden_com.shape)
+    # out_hinden=keras.layers.add([output_hinden_1, output_hinden_2])
+
+    xs_pri = sharelayer5(output_hinden_pri)
+    xs_pri = sharelayer7(xs_pri)
+    xs_pri = sharelayer8(xs_pri)
+
+    xs_com = sharelayer5(output_hinden_com)
+    xs_com = sharelayer7(xs_com)
+    xs_com = sharelayer8(xs_com)
+
+    out_xs_priandcom = keras.layers.add([xs_pri, xs_com])
+    share_out = outshare9(out_xs_priandcom)
+
+    '''
+    xs_priandcom = sharelayer5(output_hinden_priandcom)
+    # xs_pri=sharelayer6(xs_pri)
+    xs_priandcom = sharelayer7(xs_priandcom)
+    out_xs_priandcom = sharelayer8(xs_priandcom)
+    # out_xs_pri=outshare9(xs_pri)
+    share_out = outshare9(out_xs_priandcom)
+    '''
+
+    x1 = sharelayer5(x1_e)
+    # x1 = sharelayer6(x1)
+    x1 = sharelayer7(x1)
+    out_x1 = sharelayer8(x1)
+    # = outshare9(x1)
+    # x1=shareout(out_x1)
+    ##
+    x2 = sharelayer5(x2_e)
+    # x2 = sharelayer6(x2)
+    x2 = sharelayer7(x2)
+    out_x2 = sharelayer8(x2)
+    # = outshare9(x2)
+    # out12sum = keras.layers.merge([out_x1,out_x2],mode='sum')
+    out12sum = keras.layers.Add()([out_x1, out_x2])  # !!!!
+    # x12=outshare9(out_x1)
+    x12 = outshare9(out12sum)  # !!!!!!
+    ##
+    ##
+    x4 = sharelayer5(x4_e)
+    # x4 = sharelayer6(x4)
+    x4 = sharelayer7(x4)
+    out_x4 = sharelayer8(x4)
+    # out_x4 = outshare9(x4)
+    # out34sum = keras.layers.merge([out_x3,out_x4],mode='sum')
+    out34sum = keras.layers.Add()([out_x2, out_x4])  # !!!!!
+    # x34=outshare9(out_x2)
+    x34 = outshare9(out34sum)  # !!!!!!
+
+    JAEmodel = Model(inputs=[input0_1, input0_2], outputs=[x12, x34, losszj])
+    loss_layer = JAEmodel.get_layer('losszj').output
+    JAEmodel.add_loss(loss_layer)
+    predictmodel = Model(inputs=[input0_1, input0_2], outputs=share_out)
+    predictmodel.summary()
+    JAEmodel.load_weights('model.h5', by_name=True)
+
+    print('start timing')
+    time_start = time.time()
+    predsimg_1 = predictmodel.predict([img_1, img_2])
+    time_end1 = time.time()
+    print('totally cost1', time_end1 - time_start)
+    print(predsimg_1.shape, 'predsimg_1')
+    predsimg_1 = postprocess_images(predsimg_1, omin=0, omax=1)
+    preds_reimg_1 = np.reshape(predsimg_1, (predsimg_1.shape[1], predsimg_1.shape[2], predsimg_1.shape[3],))
+    print(preds_reimg_1.shape, 'preds_reimg_1')
+    # img = Image.fromarray(preds_reimg_1.astype('uint8')).convert('RGB')
+    # img.save('result/' + filename + 'preds_reimg.bmp')
+    img = Image.fromarray(preds_reimg_1.astype('uint8')).convert('L')
+    img.save('result/' + filename + '.png')
+    # sio.savemat('result/' + filename + 'preds_reimg_1_weight0.mat', {'preds_reimg_1': preds_reimg_1})
+    # imsave('result/' + filename + 'preds_reimg.bmp',preds_reimg_1)
