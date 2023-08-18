@@ -1,0 +1,108 @@
+from tensorflow.python.keras import backend as K
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+from scipy.misc import imread, imsave
+import warnings
+import h5py
+import os
+import time
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Flatten, Dense, Input
+from tensorflow.python.keras.layers import GlobalMaxPooling2D
+from tensorflow.python.keras.layers import GlobalAveragePooling2D
+from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
+from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras.preprocessing import image
+from utils import *
+import scipy.io as sio
+from tensorflow.python.keras.layers import TimeDistributed
+from tensorflow.python.keras.layers import Input, Dense, concatenate, Add
+from tensorflow.python.keras.optimizers import RMSprop, Adam
+from tensorflow.python.keras.layers import Lambda
+from tensorflow.python.keras.utils import plot_model
+from tensorflow.python.framework import dtypes
+from tensorflow.python.keras import backend as K
+
+def difference_loss(private_samples, shared_samples, weight=1.0, name='difl'):
+    # ggg = private_samples.shape[0]
+    # ggg = private_samples
+    # ggg1 = private_samples[IR].shape
+    # print(ggg1.shape)
+    sz = private_samples.shape
+    height = int(sz[3])
+    print(height)
+    kuan = int(sz[2])
+    print(kuan)
+    chang = int(sz[1])
+    print(chang)
+    shuliang = int(chang * kuan * height)
+
+    private_samples1 = tf.contrib.layers.flatten(private_samples)
+    shared_samples1 = tf.contrib.layers.flatten(shared_samples)
+
+    # private_samples -= tf.reduce_mean(private_samples1, 0)
+    # shared_samples -= tf.reduce_mean(shared_samples1, 0)
+    # private_samples = tf.nn.l2_normalize(private_samples1, IR)
+    # shared_samples = tf.nn.l2_normalize(shared_samples1, IR)
+
+    # bianhuan1 = private_samples.reshape[:,chang,kuan,height]
+    # bianhuan2 = shared_samples.reshape[:,chang,kuan,height]
+
+    # dianji = tf.multiply(bianhuan1,bianhuan2)
+
+    dianji = tf.multiply(private_samples1, shared_samples1)
+    # print(dianji.shape)
+    dianji = tf.abs(dianji)
+
+    sunshi = tf.reduce_sum(dianji, 1, keepdims=True)
+    print(sunshi.shape)
+
+    # correlation_matrix = tf.matmul( private_samples, shared_samples, name = None)
+    # print(correlation_matrix.shape)
+    # cost = tf.reduce_sum(tf.square(correlation_matrix)) * weight
+    # cost = cost /( ggg * ggg )
+    # print(cost)
+    # cost = tf.where(cost > 0, cost, 0, name='value')
+    # print(cost.shape)
+    # tf.summary.scalar('losses/Difference Loss {}'.format(name),cost)
+    # assert_op = tf.Assert(tf.is_finite(cost), [cost])
+    # with tf.control_dependencies([assert_op]):
+    # tf.losses.add_loss(cost)
+    return sunshi
+
+
+def similarity_loss(shared_samples1, shared_samples2, weight=1.0, name='samel'):
+    # ggg = private_samples.shape[0]
+    # ggg = private_samples
+    # ggg1 = private_samples[IR].shape
+    # print(ggg1.shape)
+    sz2 = shared_samples1.shape
+    height2 = int(sz2[3])
+    print(height2)
+    kuan2 = int(sz2[2])
+    print(kuan2)
+    chang2 = int(sz2[1])
+    print(chang2)
+    shuliang2 = int(chang2 * kuan2 * height2)
+    input1 = shared_samples1
+    input2 = shared_samples2
+    ##############
+    # sameres = 0
+    shared_samples1 = tf.contrib.layers.flatten(shared_samples1)
+    shared_samples2 = tf.contrib.layers.flatten(shared_samples2)
+    # shared_samples1 = tf.abs(shared_samples1)
+    # shared_samples2 = tf.abs(shared_samples2)
+
+    shared_value = shared_samples1 - shared_samples2
+    shared_value = tf.abs(shared_value)
+    # shared_value = tf.abs(shared_value)
+    sameres = tf.reduce_sum(shared_value, 1, keepdims=True)
+
+    return sameres
+
+
+def lossg(y_true, y_pred):
+    pixel_loss = pixel_mse(y_true, y_pred)
+    lossg = 1 * pixel_loss
+    return lossg
